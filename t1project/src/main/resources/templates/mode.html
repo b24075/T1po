@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <title>モード選択</title>
+</head>
+
+<body>
+  <main>
+    <h1>モード選択</h1>
+    <p>ログイン中: <span sec:authentication="name"></span></p>
+    <button type="button">人対人</button>
+    <button type="button">人対CPU</button>
+    <form th:action="@{/logout}" method="post">
+      <button type="submit">ログアウト</button>
+    </form>
+  </main>
+</body>
+
+</html>
