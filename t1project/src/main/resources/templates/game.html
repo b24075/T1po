@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title>対戦</title>
+</head>
+
+<body>
+  <main>
+    <h1>対戦</h1>
+    <p th:if="${secretNumberError}" th:text="${secretNumberError}" role="alert"></p>
+    <p th:if="${secretNumberMessage}" th:text="${secretNumberMessage}" role="status"></p>
+
+    <section th:if="${!secretNumberSet}">
+      <h2>秘密の数字を決定</h2>
+      <form th:action="@{/game/secret}" method="post">
+        <label for="secretNumber">3桁の数字（重複なし）</label>
+        <input id="secretNumber" name="secretNumber" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" required>
+        <button type="submit">数字を決定</button>
+      </form>
+    </section>
+
+    <p th:if="${secretNumberSet}">秘密の数字を決定済みです。</p>
+    <section th:if="${bothPlayersReady}">
+      <h2>予想入力</h2>
+      <p>両者の秘密の数字が決定しました。</p>
+      <input id="guess" name="guess" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3">
+    </section>
+    <p th:unless="${bothPlayersReady}">相手が秘密の数字を決定するまで予想入力はできません。</p>
+  </main>
+</body>
+
+</html>
