@@ -10,7 +10,7 @@
   <main>
     <h1>モード選択</h1>
     <p>ログイン中: <span sec:authentication="name"></span></p>
-    <button type="button">人対人</button>
+    <a th:href="@{/game}">人対人</a>
     <button type="button">人対CPU</button>
     <form th:action="@{/logout}" method="post">
       <button type="submit">ログアウト</button>
