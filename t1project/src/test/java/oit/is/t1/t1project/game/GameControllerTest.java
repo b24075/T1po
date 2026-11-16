@@ -38,4 +38,18 @@ class GameControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().string(not(containsString("123"))));
   }
+
+  @Test
+  void 対戦画面にログイン中のプレイヤー名が表示される() throws Exception {
+    MvcResult loginResult = mockMvc.perform(formLogin("/login")
+        .user("player2")
+        .password("password"))
+        .andReturn();
+    MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+
+    mockMvc.perform(get("/game").session(session))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("プレイヤー:")))
+        .andExpect(content().string(containsString("player2")));
+  }
 }

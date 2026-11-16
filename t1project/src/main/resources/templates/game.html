@@ -9,8 +9,37 @@
 <body>
   <main>
     <h1>対戦</h1>
+    <p>プレイヤー: <span th:text="${playerName}"></span></p>
     <p th:if="${secretNumberError}" th:text="${secretNumberError}" role="alert"></p>
     <p th:if="${secretNumberMessage}" th:text="${secretNumberMessage}" role="status"></p>
+    <p th:if="${guessError}" th:text="${guessError}" role="alert"></p>
+    <p th:if="${guessMessage}" th:text="${guessMessage}" role="status"></p>
+    <section th:if="${lastResult}" aria-label="直前の判定結果">
+      <h2>直前の判定結果</h2>
+      <p><span th:text="${lastResult.hits}"></span> Hit / <span th:text="${lastResult.blows}"></span> Blow</p>
+    </section>
+
+    <section th:if="${!guessHistory.isEmpty()}" aria-label="予想履歴">
+      <h2>予想履歴</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>プレイヤー</th>
+            <th>予想</th>
+            <th>Hit</th>
+            <th>Blow</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="record : ${guessHistory}">
+            <td th:text="${record.playerName}"></td>
+            <td th:text="${record.guess}"></td>
+            <td th:text="${record.result.hits}"></td>
+            <td th:text="${record.result.blows}"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
     <section th:if="${!secretNumberSet}">
       <h2>秘密の数字を決定</h2>
@@ -22,12 +51,21 @@
     </section>
 
     <p th:if="${secretNumberSet}">秘密の数字を決定済みです。</p>
-    <section th:if="${bothPlayersReady}">
+    <section th:if="${bothPlayersReady and !gameFinished and isCurrentTurn}">
       <h2>予想入力</h2>
       <p>両者の秘密の数字が決定しました。</p>
-      <input id="guess" name="guess" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3">
+      <form th:action="@{/game/guess}" method="post">
+        <label for="guess">重複のない3桁の予想</label>
+        <input id="guess" name="guess" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" required>
+        <button type="submit">予想する</button>
+      </form>
     </section>
-    <p th:unless="${bothPlayersReady}">相手が秘密の数字を決定するまで予想入力はできません。</p>
+    <p th:if="${bothPlayersReady and !gameFinished and !isCurrentTurn}">相手のターンです。</p>
+    <p th:if="${!bothPlayersReady}">相手が秘密の数字を決定するまで予想入力はできません。</p>
+    <section th:if="${gameFinished}">
+      <h2>試合終了</h2>
+      <p><span th:text="${winner}"></span> の勝利です。</p>
+    </section>
   </main>
 </body>
 
