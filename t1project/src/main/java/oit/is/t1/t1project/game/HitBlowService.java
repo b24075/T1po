@@ -1,102 +1,136 @@
 package oit.is.t1.t1project.game;
 
-import java.util.Map;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
+import oit.is.t1.t1project.match.MatchService;
+import oit.is.t1.t1project.result.ResultService;
+
 @Service
 public class HitBlowService {
 
-  private static final String FIRST_PLAYER = "player1";
-  private static final String SECOND_PLAYER = "player2";
-
   private final GameSetupService gameSetupService;
-  private final Map<String, String> secretNumbers = new ConcurrentHashMap<>();
-  private final List<GuessRecord> guessHistory = new ArrayList<>();
-  private String currentTurn = FIRST_PLAYER;
-  private String winner;
-  private HitBlowResult lastResult;
+  private final MatchService matchService;
+  private final ResultService resultService;
 
-  public HitBlowService(GameSetupService gameSetupService) {
+  private final Map<String, Map<String, String>> secretNumbers =
+      new ConcurrentHashMap<>();
+
+  public HitBlowService(
+      GameSetupService gameSetupService,
+      MatchService matchService,
+      ResultService resultService) {
     this.gameSetupService = gameSetupService;
+    this.matchService = matchService;
+    this.resultService = resultService;
   }
 
-  public HitBlowResult submitGuess(String playerName, String guess) {
+  public HitBlowResult submitGuess(
+      String matchId,
+      String playerName,
+      String guess) {
+
     validateGuess(guess);
-    if (!gameSetupService.bothPlayersReady(FIRST_PLAYER, SECOND_PLAYER)) {
-      throw new IllegalStateException("両者が秘密の数字を決定するまで予想できません。");
+
+    MatchState match = matchService.findMatch(matchId);
+
+    if (!match.hasPlayer(playerName)) {
+      throw new IllegalStateException(
+          "この試合の参加者ではありません。");
     }
-    synchronized (this) {
-      if (winner != null) {
-        throw new IllegalStateException("この試合は終了しています。");
-      }
-      if (!playerName.equals(currentTurn)) {
-        throw new IllegalStateException("現在はあなたのターンではありません。");
+
+    synchronized (match) {
+      if (match.isFinished()) {
+        throw new IllegalStateException(
+            "この試合は終了しています。");
       }
 
-      String opponent = opponentOf(playerName);
-      HitBlowResult result = judge(guess, secretNumberOf(opponent));
-      guessHistory.add(new GuessRecord(playerName, guess, result));
-      lastResult = result;
-      if (result.isWin()) {
-        winner = playerName;
-      } else {
-        currentTurn = opponent;
+      if (!playerName.equals(match.getCurrentTurn())) {
+        throw new IllegalStateException(
+            "現在はあなたのターンではありません。");
       }
+
+      String opponent = match.getFirstPlayer().equals(playerName)
+          ? match.getSecondPlayer()
+          : match.getFirstPlayer();
+
+      HitBlowResult result = judge(
+          guess,
+          secretNumberOf(matchId, opponent));
+
+      match.addGuessRecord(
+          new GuessRecord(playerName, guess, result));
+      match.setLastResult(result);
+
+      if (result.isWin()) {
+        match.setWinner(playerName);
+
+        resultService.saveResult(
+            match.getMatchId(),
+            "PLAYER_VS_PLAYER",
+            match.getFirstPlayer(),
+            match.getSecondPlayer(),
+            playerName);
+      } else {
+        match.changeTurn();
+      }
+
       return result;
     }
   }
 
-  public boolean isCurrentTurn(String playerName) {
-    synchronized (this) {
-      return winner == null && currentTurn.equals(playerName);
+  public boolean isCurrentTurn(
+      String matchId,
+      String playerName) {
+
+    MatchState match = matchService.findMatch(matchId);
+
+    synchronized (match) {
+      return !match.isFinished()
+          && match.getCurrentTurn().equals(playerName);
     }
   }
 
-  public boolean isFinished() {
-    synchronized (this) {
-      return winner != null;
-    }
+  public boolean isFinished(String matchId) {
+    return matchService.findMatch(matchId).isFinished();
   }
 
-  public String getWinner() {
-    synchronized (this) {
-      return winner;
-    }
+  public String getWinner(String matchId) {
+    return matchService.findMatch(matchId).getWinner();
   }
 
-  public HitBlowResult getLastResult() {
-    synchronized (this) {
-      return lastResult;
-    }
+  public HitBlowResult getLastResult(String matchId) {
+    return matchService.findMatch(matchId).getLastResult();
   }
 
-  public List<GuessRecord> getGuessHistory() {
-    synchronized (this) {
-      return List.copyOf(guessHistory);
-    }
+  public List<GuessRecord> getGuessHistory(String matchId) {
+    return matchService.findMatch(matchId).getGuessHistory();
   }
 
-  private String secretNumberOf(String playerName) {
-    return secretNumbers.computeIfAbsent(playerName, gameSetupService::getSecretNumber);
+  private String secretNumberOf(
+      String matchId,
+      String playerName) {
+
+    Map<String, String> matchSecrets =
+        secretNumbers.computeIfAbsent(
+            matchId,
+            ignored -> new ConcurrentHashMap<>());
+
+    return matchSecrets.computeIfAbsent(
+        playerName,
+        gameSetupService::getSecretNumber);
   }
 
-  private String opponentOf(String playerName) {
-    if (FIRST_PLAYER.equals(playerName)) {
-      return SECOND_PLAYER;
-    }
-    if (SECOND_PLAYER.equals(playerName)) {
-      return FIRST_PLAYER;
-    }
-    throw new IllegalArgumentException("対戦に参加していないプレイヤーです。");
-  }
+  private HitBlowResult judge(
+      String guess,
+      String secret) {
 
-  private HitBlowResult judge(String guess, String secret) {
     int hits = 0;
     int blows = 0;
+
     for (int index = 0; index < guess.length(); index++) {
       if (guess.charAt(index) == secret.charAt(index)) {
         hits++;
@@ -104,13 +138,16 @@ public class HitBlowService {
         blows++;
       }
     }
+
     return new HitBlowResult(hits, blows);
   }
 
   private void validateGuess(String guess) {
-    if (guess == null || !guess.matches("[0-9]{3}")
+    if (guess == null
+        || !guess.matches("[0-9]{3}")
         || guess.chars().distinct().count() != 3) {
-      throw new IllegalArgumentException("予想は重複のない3桁の数字で入力してください。");
+      throw new IllegalArgumentException(
+          "予想は重複のない3桁の数字で入力してください。");
     }
   }
 }

@@ -9,9 +9,26 @@
 <body>
   <main>
     <h1>モード選択</h1>
-    <p>ログイン中: <span sec:authentication="name"></span></p>
-    <a th:href="@{/game}">人対人</a>
-    <button type="button">人対CPU</button>
+
+    <p>
+      ログイン中:
+      <span sec:authentication="name"></span>
+    </p>
+
+    <nav aria-label="メニュー">
+      <ul>
+        <li>
+          <a th:href="@{/game}">人対人</a>
+        </li>
+        <li>
+          <button type="button" disabled>人対CPU</button>
+        </li>
+        <li>
+          <a th:href="@{/results}">試合結果</a>
+        </li>
+      </ul>
+    </nav>
+
     <form th:action="@{/logout}" method="post">
       <button type="submit">ログアウト</button>
     </form>

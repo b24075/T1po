@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title>試合結果</title>
+</head>
+
+<body>
+  <main>
+    <h1>試合結果</h1>
+
+    <p th:if="${results.isEmpty()}">
+      過去の試合結果はありません。
+    </p>
+
+    <table th:if="${!results.isEmpty()}">
+      <thead>
+        <tr>
+          <th>対戦モード</th>
+          <th>対戦者</th>
+          <th>勝者</th>
+          <th>終了日時</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr th:each="result : ${results}">
+          <td th:text="${result.mode}"></td>
+          <td>
+            <span th:text="${result.firstPlayer}"></span>
+            <span> vs </span>
+            <span th:text="${result.secondPlayer}"></span>
+          </td>
+          <td th:text="${result.winner}"></td>
+          <td th:text="${result.finishedAt}"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <a th:href="@{/mode}">メニューに戻る</a>
+    </p>
+  </main>
+</body>
+
+</html>

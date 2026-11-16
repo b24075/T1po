@@ -15,6 +15,8 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import oit.is.t1.t1project.match.MatchService;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class GameControllerTest {
@@ -25,16 +27,22 @@ class GameControllerTest {
   @Autowired
   private GameSetupService gameSetupService;
 
+  @Autowired
+  private MatchService matchService;
+
   @Test
   void 相手の秘密の数字は対戦画面に表示されない() throws Exception {
     gameSetupService.setSecretNumber("player1", "123");
+    MatchState match = matchService.createMatch("player1", "player2");
     MvcResult loginResult = mockMvc.perform(formLogin("/login")
         .user("player2")
         .password("password"))
         .andReturn();
     MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
-    mockMvc.perform(get("/game").session(session))
+    mockMvc.perform(get("/game")
+      .param("matchId", match.getMatchId())
+      .session(session))
         .andExpect(status().isOk())
         .andExpect(content().string(not(containsString("123"))));
   }
@@ -46,8 +54,11 @@ class GameControllerTest {
         .password("password"))
         .andReturn();
     MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+    MatchState match = matchService.createMatch("player1", "player2");
 
-    mockMvc.perform(get("/game").session(session))
+    mockMvc.perform(get("/game")
+      .param("matchId", match.getMatchId())
+      .session(session))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("プレイヤー:")))
         .andExpect(content().string(containsString("player2")));

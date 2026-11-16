@@ -5,71 +5,91 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import oit.is.t1.t1project.match.MatchService;
+import oit.is.t1.t1project.result.MatchResultMapper;
+import oit.is.t1.t1project.result.ResultService;
+
+@ExtendWith(MockitoExtension.class)
 class HitBlowServiceTest {
 
-  @Test
-  void 相手の秘密の数字に対するHitとBlowを判定してターンを交代する() {
-    HitBlowService service = new HitBlowService(readyGame());
+  @Mock
+  private MatchResultMapper matchResultMapper;
 
-    HitBlowResult result = service.submitGuess("player1", "465");
+  private GameSetupService gameSetupService;
+  private MatchService matchService;
+  private HitBlowService service;
+  private MatchState match;
+
+  @BeforeEach
+  void setUp() {
+    gameSetupService = new GameSetupService();
+    gameSetupService.setSecretNumber("player1", "123");
+    gameSetupService.setSecretNumber("player2", "456");
+    matchService = new MatchService();
+    match = matchService.createMatch("player1", "player2");
+    service = new HitBlowService(
+        gameSetupService,
+        matchService,
+        new ResultService(matchResultMapper));
+  }
+
+  @Test
+  void 試合IDごとにHitとBlowを判定してターンを交代する() {
+    HitBlowResult result = service.submitGuess(
+        match.getMatchId(), "player1", "465");
 
     assertEquals(1, result.hits());
     assertEquals(2, result.blows());
-    assertEquals(result, service.getLastResult());
-    assertEquals(1, service.getGuessHistory().size());
-    assertEquals("player1", service.getGuessHistory().get(0).playerName());
-    assertEquals("465", service.getGuessHistory().get(0).guess());
-    assertFalse(service.isCurrentTurn("player1"));
-    assertTrue(service.isCurrentTurn("player2"));
+    assertEquals(result,
+        service.getLastResult(match.getMatchId()));
+    assertFalse(service.isCurrentTurn(
+        match.getMatchId(), "player1"));
+    assertTrue(service.isCurrentTurn(
+        match.getMatchId(), "player2"));
   }
 
   @Test
   void ターンではないプレイヤーの予想は受け付けない() {
-    HitBlowService service = new HitBlowService(readyGame());
-
-    assertThrows(IllegalStateException.class, () -> service.submitGuess("player2", "456"));
+    assertThrows(IllegalStateException.class, () -> service.submitGuess(
+        match.getMatchId(), "player2", "456"));
   }
 
   @Test
   void 重複または3桁でない予想は受け付けない() {
-    HitBlowService service = new HitBlowService(readyGame());
-
-    assertThrows(IllegalArgumentException.class, () -> service.submitGuess("player1", "112"));
-    assertThrows(IllegalArgumentException.class, () -> service.submitGuess("player1", "12"));
+    assertThrows(IllegalArgumentException.class, () -> service.submitGuess(
+        match.getMatchId(), "player1", "112"));
+    assertThrows(IllegalArgumentException.class, () -> service.submitGuess(
+        match.getMatchId(), "player1", "12"));
   }
 
   @Test
   void 三Hitで試合終了し勝者が確定する() {
-    HitBlowService service = new HitBlowService(readyGame());
-
-    HitBlowResult result = service.submitGuess("player1", "456");
+    HitBlowResult result = service.submitGuess(
+        match.getMatchId(), "player1", "456");
 
     assertTrue(result.isWin());
-    assertTrue(service.isFinished());
-    assertEquals("player1", service.getWinner());
-    assertThrows(IllegalStateException.class, () -> service.submitGuess("player2", "123"));
+    assertTrue(service.isFinished(match.getMatchId()));
+    assertEquals("player1",
+        service.getWinner(match.getMatchId()));
   }
 
   @Test
-  void 毎回の予想を入力順に履歴として保持する() {
-    HitBlowService service = new HitBlowService(readyGame());
+  void 複数試合の状態が混ざらない() {
+    MatchState secondMatch =
+        matchService.createMatch("player1", "player2");
 
-    service.submitGuess("player1", "465");
-    service.submitGuess("player2", "123");
+    service.submitGuess(
+        match.getMatchId(), "player1", "465");
 
-    assertEquals(2, service.getGuessHistory().size());
-    assertEquals("player1", service.getGuessHistory().get(0).playerName());
-    assertEquals("player2", service.getGuessHistory().get(1).playerName());
-    assertEquals("123", service.getGuessHistory().get(1).guess());
-    assertEquals(3, service.getGuessHistory().get(1).result().hits());
-  }
-
-  private GameSetupService readyGame() {
-    GameSetupService setupService = new GameSetupService();
-    setupService.setSecretNumber("player1", "123");
-    setupService.setSecretNumber("player2", "456");
-    return setupService;
+    assertTrue(service.isCurrentTurn(
+        secondMatch.getMatchId(), "player1"));
+    assertFalse(service.isFinished(
+        secondMatch.getMatchId()));
   }
 }
