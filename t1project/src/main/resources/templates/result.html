@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title>試合結果</title>
+</head>
+
+<body>
+  <main>
+    <h1>試合結果</h1>
+    <p>試合ID: <span th:text="${result.matchId}"></span></p>
+    <p>
+      <span th:text="${result.firstPlayer}"></span>
+      対
+      <span th:text="${result.secondPlayer}"></span>
+    </p>
+    <p>勝者: <span th:text="${result.winner}"></span></p>
+  </main>
+</body>
+
+</html>
