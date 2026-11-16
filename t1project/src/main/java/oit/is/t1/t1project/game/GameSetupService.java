@@ -18,6 +18,14 @@ public class GameSetupService {
     return secretNumbers.containsKey(playerName);
   }
 
+  public String getSecretNumber(String playerName) {
+    SecretNumber secretNumber = secretNumbers.get(playerName);
+    if (secretNumber == null) {
+      throw new IllegalStateException("秘密の数字が決定されていません。");
+    }
+    return secretNumber.value();
+  }
+
   public boolean bothPlayersReady(String firstPlayer, String secondPlayer) {
     return hasSecretNumber(firstPlayer) && hasSecretNumber(secondPlayer);
   }

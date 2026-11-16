@@ -15,16 +15,24 @@ public class GameController {
   private static final String SECOND_PLAYER = "player2";
 
   private final GameSetupService gameSetupService;
+  private final HitBlowService hitBlowService;
 
-  public GameController(GameSetupService gameSetupService) {
+  public GameController(GameSetupService gameSetupService, HitBlowService hitBlowService) {
     this.gameSetupService = gameSetupService;
+    this.hitBlowService = hitBlowService;
   }
 
   @GetMapping("/game")
   public String game(Authentication authentication, Model model) {
     String playerName = authentication.getName();
+    model.addAttribute("playerName", playerName);
     model.addAttribute("secretNumberSet", gameSetupService.hasSecretNumber(playerName));
     model.addAttribute("bothPlayersReady", gameSetupService.bothPlayersReady(FIRST_PLAYER, SECOND_PLAYER));
+    model.addAttribute("isCurrentTurn", hitBlowService.isCurrentTurn(playerName));
+    model.addAttribute("gameFinished", hitBlowService.isFinished());
+    model.addAttribute("winner", hitBlowService.getWinner());
+    model.addAttribute("lastResult", hitBlowService.getLastResult());
+    model.addAttribute("guessHistory", hitBlowService.getGuessHistory());
     return "game";
   }
 
@@ -36,6 +44,19 @@ public class GameController {
       redirectAttributes.addFlashAttribute("secretNumberMessage", "秘密の数字を決定しました。");
     } catch (IllegalArgumentException exception) {
       redirectAttributes.addFlashAttribute("secretNumberError", exception.getMessage());
+    }
+    return "redirect:/game";
+  }
+
+  @PostMapping("/game/guess")
+  public String submitGuess(Authentication authentication,
+      @RequestParam("guess") String guess, RedirectAttributes redirectAttributes) {
+    try {
+      HitBlowResult result = hitBlowService.submitGuess(authentication.getName(), guess);
+      redirectAttributes.addFlashAttribute("guessMessage",
+          "判定結果: " + result.hits() + " Hit / " + result.blows() + " Blow");
+    } catch (IllegalArgumentException | IllegalStateException exception) {
+      redirectAttributes.addFlashAttribute("guessError", exception.getMessage());
     }
     return "redirect:/game";
   }
