@@ -17,6 +17,12 @@ public class ResultController {
     this.resultService = resultService;
   }
 
+  @GetMapping("/results")
+  public String results(Authentication authentication, Model model) {
+    model.addAttribute("results", resultService.findByPlayer(authentication.getName()));
+    return "results";
+  }
+
   @GetMapping({"/result", "/results/detail"})
   public String result(
       @RequestParam("matchId") String matchId,

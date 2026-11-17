@@ -49,6 +49,29 @@ class ResultControllerTest {
         .andExpect(content().string(containsString("CPU")));
   }
 
+
+        @Test
+        void モード選択ページから過去の試合結果へのリンクを表示する() throws Exception {
+          MockHttpSession session = loginAs("player1");
+
+          mockMvc.perform(get("/mode").session(session))
+          .andExpect(status().isOk())
+          .andExpect(content().string(containsString("過去の試合結果")))
+          .andExpect(content().string(containsString("/results")));
+        }
+
+        @Test
+        void 過去の試合結果にはログイン中のプレイヤーが参加した結果だけ表示する() throws Exception {
+          resultService.save(new MatchResult("player-result", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
+          resultService.save(new MatchResult("other-result", "PLAYER_VS_PLAYER", "player2", "other", "other"));
+
+          MockHttpSession session = loginAs("player1");
+
+          mockMvc.perform(get("/results").session(session))
+          .andExpect(status().isOk())
+          .andExpect(content().string(containsString("player-result")))
+          .andExpect(content().string(not(containsString("other-result"))));
+        }
   @Test
   void 別の試合の結果を表示しない() throws Exception {
     resultService.save(new MatchResult("match-one", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));

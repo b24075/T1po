@@ -12,6 +12,7 @@
     <p>ログイン中: <span sec:authentication="name"></span></p>
     <a th:href="@{/game}">人対人</a>
     <button type="button">人対CPU</button>
+    <a th:href="@{/results}">過去の試合結果</a>
     <form th:action="@{/logout}" method="post">
       <button type="submit">ログアウト</button>
     </form>

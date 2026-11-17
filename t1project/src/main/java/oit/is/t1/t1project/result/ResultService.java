@@ -1,5 +1,6 @@
 package oit.is.t1.t1project.result;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +17,12 @@ public class ResultService {
 
   public MatchResult findByMatchId(String matchId) {
     return results.get(matchId);
+  }
+
+  public List<MatchResult> findByPlayer(String playerName) {
+    return results.values().stream()
+        .filter(result -> belongsTo(result, playerName))
+        .toList();
   }
 
   public boolean belongsTo(MatchResult result, String playerName) {
