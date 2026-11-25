@@ -10,6 +10,8 @@
   <main>
     <h1>対戦</h1>
     <p>プレイヤー: <span th:text="${playerName}"></span></p>
+    <p>試合ID: <span th:text="${matchId}"></span></p>
+    <p th:if="${waitingForOpponent}" role="status">対戦相手を待っています。</p>
     <p th:if="${secretNumberError}" th:text="${secretNumberError}" role="alert"></p>
     <p th:if="${secretNumberMessage}" th:text="${secretNumberMessage}" role="status"></p>
     <p th:if="${guessError}" th:text="${guessError}" role="alert"></p>
@@ -44,8 +46,10 @@
     <section th:if="${!secretNumberSet}">
       <h2>秘密の数字を決定</h2>
       <form th:action="@{/game/secret}" method="post">
+        <input type="hidden" name="matchId" th:value="${matchId}">
         <label for="secretNumber">3桁の数字（重複なし）</label>
-        <input id="secretNumber" name="secretNumber" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" required>
+        <input id="secretNumber" name="secretNumber" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3"
+          required>
         <button type="submit">数字を決定</button>
       </form>
     </section>
@@ -55,16 +59,19 @@
       <h2>予想入力</h2>
       <p>両者の秘密の数字が決定しました。</p>
       <form th:action="@{/game/guess}" method="post">
+        <input type="hidden" name="matchId" th:value="${matchId}">
         <label for="guess">重複のない3桁の予想</label>
         <input id="guess" name="guess" type="text" inputmode="numeric" pattern="[0-9]{3}" maxlength="3" required>
         <button type="submit">予想する</button>
       </form>
     </section>
     <p th:if="${bothPlayersReady and !gameFinished and !isCurrentTurn}">相手のターンです。</p>
-    <p th:if="${!bothPlayersReady}">相手が秘密の数字を決定するまで予想入力はできません。</p>
+    <p th:if="${!bothPlayersReady and !waitingForOpponent}">両者が秘密の数字を決定するまで予想入力はできません。</p>
     <section th:if="${gameFinished}">
       <h2>試合終了</h2>
       <p><span th:text="${winner}"></span> の勝利です。</p>
+      <a th:href="@{/result(matchId=${matchId})}">結果を見る</a>
+      <a th:href="@{/mode}">モード選択に戻る</a>
     </section>
   </main>
 </body>

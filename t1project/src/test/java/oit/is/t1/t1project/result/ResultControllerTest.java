@@ -34,7 +34,9 @@ class ResultControllerTest {
     mockMvc.perform(get("/result").param("matchId", "human-match").session(session))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("player1")))
-        .andExpect(content().string(containsString("player2")));
+        .andExpect(content().string(containsString("player2")))
+        .andExpect(content().string(containsString("モード選択に戻る")))
+        .andExpect(content().string(containsString("/mode")));
   }
 
   @Test
@@ -49,29 +51,29 @@ class ResultControllerTest {
         .andExpect(content().string(containsString("CPU")));
   }
 
+  @Test
+  void モード選択ページから過去の試合結果へのリンクを表示する() throws Exception {
+    MockHttpSession session = loginAs("player1");
 
-        @Test
-        void モード選択ページから過去の試合結果へのリンクを表示する() throws Exception {
-          MockHttpSession session = loginAs("player1");
+    mockMvc.perform(get("/mode").session(session))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("過去の試合結果")))
+        .andExpect(content().string(containsString("/results")));
+  }
 
-          mockMvc.perform(get("/mode").session(session))
-          .andExpect(status().isOk())
-          .andExpect(content().string(containsString("過去の試合結果")))
-          .andExpect(content().string(containsString("/results")));
-        }
+  @Test
+  void 過去の試合結果にはログイン中のプレイヤーが参加した結果だけ表示する() throws Exception {
+    resultService.save(new MatchResult("player-result", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
+    resultService.save(new MatchResult("other-result", "PLAYER_VS_PLAYER", "player2", "other", "other"));
 
-        @Test
-        void 過去の試合結果にはログイン中のプレイヤーが参加した結果だけ表示する() throws Exception {
-          resultService.save(new MatchResult("player-result", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
-          resultService.save(new MatchResult("other-result", "PLAYER_VS_PLAYER", "player2", "other", "other"));
+    MockHttpSession session = loginAs("player1");
 
-          MockHttpSession session = loginAs("player1");
+    mockMvc.perform(get("/results").session(session))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("player-result")))
+        .andExpect(content().string(not(containsString("other-result"))));
+  }
 
-          mockMvc.perform(get("/results").session(session))
-          .andExpect(status().isOk())
-          .andExpect(content().string(containsString("player-result")))
-          .andExpect(content().string(not(containsString("other-result"))));
-        }
   @Test
   void 別の試合の結果を表示しない() throws Exception {
     resultService.save(new MatchResult("match-one", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
@@ -92,7 +94,7 @@ class ResultControllerTest {
     MockHttpSession session = loginAs("player2");
 
     mockMvc.perform(get("/result").param("matchId", "private-match").session(session))
-      .andExpect(status().isForbidden());
+        .andExpect(status().isForbidden());
   }
 
   private MockHttpSession loginAs(String username) throws Exception {
