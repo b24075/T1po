@@ -1,32 +1,19 @@
 package oit.is.t1.t1project.game;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.stereotype.Service;
 
 @Service
 public class GameSetupService {
 
-  private final Map<String, SecretNumber> secretNumbers = new ConcurrentHashMap<>();
-
-  public void setSecretNumber(String playerName, String value) {
-    secretNumbers.put(playerName, new SecretNumber(value));
+  public void setSecretNumber(MatchState match, String playerName, String value) {
+    match.setSecretNumber(playerName, value);
   }
 
-  public boolean hasSecretNumber(String playerName) {
-    return secretNumbers.containsKey(playerName);
+  public boolean hasSecretNumber(MatchState match, String playerName) {
+    return match.hasSecretNumber(playerName);
   }
 
-  public String getSecretNumber(String playerName) {
-    SecretNumber secretNumber = secretNumbers.get(playerName);
-    if (secretNumber == null) {
-      throw new IllegalStateException("秘密の数字が決定されていません。");
-    }
-    return secretNumber.value();
-  }
-
-  public boolean bothPlayersReady(String firstPlayer, String secondPlayer) {
-    return hasSecretNumber(firstPlayer) && hasSecretNumber(secondPlayer);
+  public boolean bothPlayersReady(MatchState match) {
+    return match.bothPlayersReady();
   }
 }

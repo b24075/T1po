@@ -1,97 +1,36 @@
 package oit.is.t1.t1project.game;
 
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Locale;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
 
 @Service
 public class HitBlowService {
 
-  private static final String FIRST_PLAYER = "player1";
-  private static final String SECOND_PLAYER = "player2";
-
-  private final GameSetupService gameSetupService;
-  private final Map<String, String> secretNumbers = new ConcurrentHashMap<>();
-  private final List<GuessRecord> guessHistory = new ArrayList<>();
-  private String currentTurn = FIRST_PLAYER;
-  private String winner;
-  private HitBlowResult lastResult;
-
-  public HitBlowService(GameSetupService gameSetupService) {
-    this.gameSetupService = gameSetupService;
-  }
-
-  public HitBlowResult submitGuess(String playerName, String guess) {
+  public HitBlowResult submitGuess(MatchState match, String playerName, String guess) {
     validateGuess(guess);
-    if (!gameSetupService.bothPlayersReady(FIRST_PLAYER, SECOND_PLAYER)) {
-      throw new IllegalStateException("両者が秘密の数字を決定するまで予想できません。");
-    }
-    synchronized (this) {
-      if (winner != null) {
-        throw new IllegalStateException("この試合は終了しています。");
-      }
-      if (!playerName.equals(currentTurn)) {
-        throw new IllegalStateException("現在はあなたのターンではありません。");
-      }
-
-      String opponent = opponentOf(playerName);
-      HitBlowResult result = judge(guess, secretNumberOf(opponent));
-      guessHistory.add(new GuessRecord(playerName, guess, result));
-      lastResult = result;
-      if (result.isWin()) {
-        winner = playerName;
-      } else {
-        currentTurn = opponent;
+    synchronized (match) {
+      match.assertCanGuess(playerName);
+      HitBlowResult result = judge(guess, match.secretNumberOf(match.opponentOf(playerName)));
+      match.recordGuess(playerName, guess, result);
+      if (MatchState.PLAYER_VS_CPU.equals(match.getMode())
+          && !match.isFinished()
+          && MatchState.CPU_PLAYER.equals(match.getCurrentTurn())) {
+        submitCpuGuess(match);
       }
       return result;
     }
   }
 
-  public boolean isCurrentTurn(String playerName) {
-    synchronized (this) {
-      return winner == null && currentTurn.equals(playerName);
-    }
-  }
+  private void submitCpuGuess(MatchState match) {
+    String guess;
+    do {
+      guess = String.format(Locale.ROOT, "%03d", ThreadLocalRandom.current().nextInt(1000));
+    } while (guess.chars().distinct().count() != 3);
 
-  public boolean isFinished() {
-    synchronized (this) {
-      return winner != null;
-    }
-  }
-
-  public String getWinner() {
-    synchronized (this) {
-      return winner;
-    }
-  }
-
-  public HitBlowResult getLastResult() {
-    synchronized (this) {
-      return lastResult;
-    }
-  }
-
-  public List<GuessRecord> getGuessHistory() {
-    synchronized (this) {
-      return List.copyOf(guessHistory);
-    }
-  }
-
-  private String secretNumberOf(String playerName) {
-    return secretNumbers.computeIfAbsent(playerName, gameSetupService::getSecretNumber);
-  }
-
-  private String opponentOf(String playerName) {
-    if (FIRST_PLAYER.equals(playerName)) {
-      return SECOND_PLAYER;
-    }
-    if (SECOND_PLAYER.equals(playerName)) {
-      return FIRST_PLAYER;
-    }
-    throw new IllegalArgumentException("対戦に参加していないプレイヤーです。");
+    HitBlowResult result = judge(guess, match.secretNumberOf(match.getFirstPlayer()));
+    match.recordGuess(MatchState.CPU_PLAYER, guess, result);
   }
 
   private HitBlowResult judge(String guess, String secret) {
