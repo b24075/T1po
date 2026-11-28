@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="oit.is.t1.t1project.match.MatchMapper">
+  <resultMap id="matchRecord" type="oit.is.t1.t1project.match.MatchRecord">
+    <id property="matchId" column="match_id" />
+    <result property="mode" column="mode" />
+    <result property="firstPlayer" column="first_player" />
+    <result property="secondPlayer" column="second_player" />
+    <result property="firstSecretNumber" column="first_secret_number" />
+    <result property="secondSecretNumber" column="second_secret_number" />
+    <result property="currentTurn" column="current_turn" />
+    <result property="winner" column="winner" />
+    <result property="status" column="status" />
+  </resultMap>
+
+  <sql id="columns">
+    match_id, mode, first_player, second_player, first_secret_number,
+    second_secret_number, current_turn, winner, status
+  </sql>
+
+  <insert id="insert" parameterType="oit.is.t1.t1project.match.MatchRecord">
+    INSERT INTO matches (
+      <include refid="columns" />
+    ) VALUES (
+      #{matchId}, #{mode}, #{firstPlayer}, #{secondPlayer}, #{firstSecretNumber},
+      #{secondSecretNumber}, #{currentTurn}, #{winner}, #{status}
+    )
+  </insert>
+
+  <update id="update" parameterType="oit.is.t1.t1project.match.MatchRecord">
+    UPDATE matches
+    SET mode = #{mode},
+        first_player = #{firstPlayer},
+        second_player = #{secondPlayer},
+        first_secret_number = #{firstSecretNumber},
+        second_secret_number = #{secondSecretNumber},
+        current_turn = #{currentTurn},
+        winner = #{winner},
+        status = #{status}
+    WHERE match_id = #{matchId}
+  </update>
+
+  <select id="findById" resultMap="matchRecord">
+    SELECT <include refid="columns" />
+    FROM matches
+    WHERE match_id = #{matchId}
+  </select>
+
+  <select id="findWaitingHumanMatches" resultMap="matchRecord">
+    SELECT <include refid="columns" />
+    FROM matches
+    WHERE mode = 'PLAYER_VS_PLAYER'
+      AND second_player IS NULL
+    ORDER BY match_id
+  </select>
+
+  <select id="findByPlayer" resultMap="matchRecord">
+    SELECT <include refid="columns" />
+    FROM matches
+    WHERE winner IS NOT NULL
+      AND (first_player = #{playerName} OR second_player = #{playerName})
+    ORDER BY match_id DESC
+  </select>
+</mapper>

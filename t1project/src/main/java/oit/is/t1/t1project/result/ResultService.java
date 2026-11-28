@@ -1,27 +1,29 @@
 package oit.is.t1.t1project.result;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
+
+import oit.is.t1.t1project.match.MatchMapper;
+import oit.is.t1.t1project.match.MatchRecord;
 
 @Service
 public class ResultService {
 
-  private final Map<String, MatchResult> results = new ConcurrentHashMap<>();
+  private final MatchMapper matchMapper;
 
-  public void save(MatchResult result) {
-    results.putIfAbsent(result.matchId(), result);
+  public ResultService(MatchMapper matchMapper) {
+    this.matchMapper = matchMapper;
   }
 
   public MatchResult findByMatchId(String matchId) {
-    return results.get(matchId);
+    MatchRecord match = matchMapper.findById(matchId);
+    return match == null || match.getWinner() == null ? null : match.toMatchResult();
   }
 
   public List<MatchResult> findByPlayer(String playerName) {
-    return results.values().stream()
-        .filter(result -> belongsTo(result, playerName))
+    return matchMapper.findByPlayer(playerName).stream()
+        .map(MatchRecord::toMatchResult)
         .toList();
   }
 

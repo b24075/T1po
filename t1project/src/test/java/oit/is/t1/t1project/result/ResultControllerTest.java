@@ -12,22 +12,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import oit.is.t1.t1project.match.MatchMapper;
+import oit.is.t1.t1project.match.MatchRecord;
+
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class ResultControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
 
   @Autowired
-  private ResultService resultService;
+  private MatchMapper matchMapper;
 
   @Test
   void 人対人の結果画面に対戦者と勝者を表示する() throws Exception {
-    resultService.save(new MatchResult("human-match", "PLAYER_VS_PLAYER", "player1", "player2", "player2"));
+    saveResult("human-match", "PLAYER_VS_PLAYER", "player1", "player2", "player2");
 
     MockHttpSession session = loginAs("player2");
 
@@ -41,7 +46,7 @@ class ResultControllerTest {
 
   @Test
   void 人対CPUの結果画面にCPUと勝者を表示する() throws Exception {
-    resultService.save(new MatchResult("cpu-match", "PLAYER_VS_CPU", "player1", "CPU", "player1"));
+    saveResult("cpu-match", "PLAYER_VS_CPU", "player1", "CPU", "player1");
 
     MockHttpSession session = loginAs("player1");
 
@@ -63,8 +68,8 @@ class ResultControllerTest {
 
   @Test
   void 過去の試合結果にはログイン中のプレイヤーが参加した結果だけ表示する() throws Exception {
-    resultService.save(new MatchResult("player-result", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
-    resultService.save(new MatchResult("other-result", "PLAYER_VS_PLAYER", "player2", "other", "other"));
+    saveResult("player-result", "PLAYER_VS_PLAYER", "player1", "player2", "player1");
+    saveResult("other-result", "PLAYER_VS_PLAYER", "player2", "other", "other");
 
     MockHttpSession session = loginAs("player1");
 
@@ -76,8 +81,8 @@ class ResultControllerTest {
 
   @Test
   void 別の試合の結果を表示しない() throws Exception {
-    resultService.save(new MatchResult("match-one", "PLAYER_VS_PLAYER", "player1", "player2", "player1"));
-    resultService.save(new MatchResult("match-two", "PLAYER_VS_PLAYER", "player1", "player2", "player2"));
+    saveResult("match-one", "PLAYER_VS_PLAYER", "player1", "player2", "player1");
+    saveResult("match-two", "PLAYER_VS_PLAYER", "player1", "player2", "player2");
 
     MockHttpSession session = loginAs("player1");
 
@@ -89,7 +94,7 @@ class ResultControllerTest {
 
   @Test
   void 参加していない試合の結果は表示できない() throws Exception {
-    resultService.save(new MatchResult("private-match", "PLAYER_VS_CPU", "player1", "CPU", "player1"));
+    saveResult("private-match", "PLAYER_VS_CPU", "player1", "CPU", "player1");
 
     MockHttpSession session = loginAs("player2");
 
@@ -103,5 +108,18 @@ class ResultControllerTest {
         .password("password"))
         .andReturn();
     return (MockHttpSession) loginResult.getRequest().getSession(false);
+  }
+
+  private void saveResult(
+      String matchId, String mode, String firstPlayer, String secondPlayer, String winner) {
+    MatchRecord match = new MatchRecord();
+    match.setMatchId(matchId);
+    match.setMode(mode);
+    match.setFirstPlayer(firstPlayer);
+    match.setSecondPlayer(secondPlayer);
+    match.setCurrentTurn(winner);
+    match.setWinner(winner);
+    match.setStatus("FINISHED");
+    matchMapper.insert(match);
   }
 }
