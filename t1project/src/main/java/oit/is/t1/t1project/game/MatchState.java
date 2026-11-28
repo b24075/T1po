@@ -1,8 +1,8 @@
 package oit.is.t1.t1project.game;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MatchState {
@@ -27,6 +27,22 @@ public class MatchState {
     this.firstPlayer = firstPlayer;
     this.secondPlayer = secondPlayer;
     this.currentTurn = firstPlayer;
+  }
+
+  public MatchState(
+      String matchId,
+      String mode,
+      String firstPlayer,
+      String secondPlayer,
+      String firstSecretNumber,
+      String secondSecretNumber,
+      String currentTurn,
+      String winner) {
+    this(matchId, mode, firstPlayer, secondPlayer);
+    restoreSecretNumber(firstPlayer, firstSecretNumber);
+    restoreSecretNumber(secondPlayer, secondSecretNumber);
+    this.currentTurn = currentTurn == null ? firstPlayer : currentTurn;
+    this.winner = winner;
   }
 
   public String getMatchId() {
@@ -102,6 +118,32 @@ public class MatchState {
     return List.copyOf(guessHistory);
   }
 
+  public synchronized MatchStateSnapshot snapshot() {
+    return new MatchStateSnapshot(
+        matchId,
+        mode,
+        firstPlayer,
+        secondPlayer,
+        secretNumberValue(firstPlayer),
+        secretNumberValue(secondPlayer),
+        currentTurn,
+        winner,
+        getStatus());
+  }
+
+  public synchronized String getStatus() {
+    if (winner != null) {
+      return "FINISHED";
+    }
+    if (secondPlayer == null) {
+      return "WAITING";
+    }
+    if (!bothPlayersReady()) {
+      return "SETUP";
+    }
+    return "IN_PROGRESS";
+  }
+
   synchronized void assertCanGuess(String playerName) {
     requireParticipant(playerName);
     if (!bothPlayersReady()) {
@@ -145,5 +187,19 @@ public class MatchState {
     if (!isParticipant(playerName)) {
       throw new IllegalArgumentException("対戦に参加していないプレイヤーです。");
     }
+  }
+
+  private void restoreSecretNumber(String playerName, String value) {
+    if (playerName != null && value != null) {
+      secretNumbers.put(playerName, new SecretNumber(value));
+    }
+  }
+
+  private String secretNumberValue(String playerName) {
+    if (playerName == null) {
+      return null;
+    }
+    SecretNumber secretNumber = secretNumbers.get(playerName);
+    return secretNumber == null ? null : secretNumber.value();
   }
 }

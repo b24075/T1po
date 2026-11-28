@@ -57,6 +57,7 @@ public class GameController {
     MatchState match = requireMatch(matchId, authentication.getName());
     try {
       gameSetupService.setSecretNumber(match, authentication.getName(), value);
+      matchService.saveState(match);
       redirectAttributes.addFlashAttribute("secretNumberMessage", "秘密の数字を決定しました。");
     } catch (IllegalArgumentException | IllegalStateException exception) {
       redirectAttributes.addFlashAttribute("secretNumberError", exception.getMessage());
@@ -73,7 +74,7 @@ public class GameController {
     MatchState match = requireMatch(matchId, authentication.getName());
     try {
       HitBlowResult result = hitBlowService.submitGuess(match, authentication.getName(), guess);
-      matchService.saveResultIfFinished(match);
+      matchService.saveState(match);
       redirectAttributes.addFlashAttribute("guessMessage",
           "判定結果: " + result.hits() + " Hit / " + result.blows() + " Blow");
     } catch (IllegalArgumentException | IllegalStateException exception) {
